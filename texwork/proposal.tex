@@ -1,0 +1,96 @@
+\documentclass{article} % Moved to the top
+
+% 1. Add the geometry package here to narrow the margins
+\usepackage[margin=1.25in]{geometry}
+
+% Your existing commands
+\newcommand{\Term}{Spring 2026}
+\newcommand{\Course}{Compsci 590}
+\newcommand{\Assignment}{Project Proposal}
+\newcommand{\DueDate}{}
+\newcommand{\brak}[1]{\left\langle #1\right\rangle}
+\newcommand{\abs}[1]{\left\lvert #1\right\rvert}
+\newcommand{\Neg}{\phantom{-}}
+\renewcommand{\emptyset}{\varnothing}
+\renewcommand{\subset}{\subseteq}
+\newcommand{\ds}{\displaystyle}
+\newcommand{\Number}[1]{\mathbf{#1}}
+\newcommand{\C}{\Number{C}}
+\newcommand{\N}{\Number{N}}
+\newcommand{\Q}{\Number{Q}}
+\newcommand{\R}{\Number{R}}
+\newcommand{\Z}{\Number{Z}}
+\newcommand{\eps}{\varepsilon}
+\newcommand{\Input}[1]{\includegraphics{#1.pdf}}
+\newcommand{\Prob}[1]{\noindent\textbf{Question #1:}\quad}
+\newcommand{\soln}[1][Answer]{\noindent\textbf{#1}\quad}
+\newcommand{\Cmd}[1]{\textbackslash\texttt{#1}}
+
+\pagestyle{empty}
+
+% Your existing packages
+\usepackage{graphicx} 
+\usepackage{amsmath,amssymb}
+\usepackage{enumitem}
+\usepackage{multirow}
+\usepackage[utf8]{inputenc}
+\usepackage{dsfont}
+\usepackage{float}
+\usepackage{hyperref}
+
+\title{Human-Actionable Policy Distillation through Variational Prototype Selection}
+\author{Ethan Ouellette \& Braeden Shepheard}
+\date{March 20, 2026}
+
+\begin{document}
+
+\maketitle
+
+\section{Project Goals}
+The primary objective of this project is to automate the selection of interpretability-enabling prototypes in the Prototype-Wrapper Network (PW-Net) framework. While Deep Reinforcement Learning (RL) has achieved state-of-the-art results in complex domains, these models remain opaque. PW-Net addresses this by wrapping a black-box encoder and forcing decisions to be based on human-friendly prototypes. However, the current model requires humans to manually define these prototypical states, which is not scalable in environments where expert concepts are difficult to define.
+
+Our project investigates whether \textbf{action-space clustering} can automatically identify the minimal set of "cases" required for a PW-Net to maintain performance while remaining transparent. This is directly related to finding heuristically simpler policies in a given Rashomon set for a task.   
+
+\textbf{Complete success} is defined as:
+\begin{itemize}
+    \item Implementing an automated selection algorithm that clusters actions in the $(\text{steering, acceleration, braking})$ space to identify representative training states.
+    \item Achieving an average reward in the Car Racing domain within 10\% (?) of the original black-box agent while using fewer than 10 (?) prototypes.
+\end{itemize}
+
+\textbf{Partial success} would involve demonstrating the performance-interpretability trade-off—identifying the "breaking point" where reducing the number of prototypes causes the wrapper to lose the ability to approximate the black-box oracle.
+
+\section{Technical Approach}
+We will modify an existing algorithm focused on the OpenAI Gym Car Racing domain.
+
+\subsection{Data Generation and Action-Space Clustering}
+We will first collect a dataset $\mathcal{D} = \{(s, \pi_{bb}(s))\}_{i=0}^n$ of state-action pairs by running a pre-trained PPO black-box agent. Since the action space $A \in \mathbb{R}^3$ corresponds to steering, braking, and acceleration, we will apply clustering to these action tuples. For each of the $k$ resulting clusters, we will select the state $s$ closest to the cluster centroid to serve as the automated prototype $p_{i,j}$. We will also experiment with sampling of prototypes from clusters based on distance to centroid to reduce overfitting.
+
+\subsection{Wrapper Integration and Optimization}
+The automated prototypes will be encoded through the original agent's encoder $f_{enc}$ and used as latent prototypes $p_{i,j}$. We will train the projection networks $h_{i,j}$ using gradient descent to minimize the loss between the wrapper output $a'_i$ and the black-box action $a$. The final action will be calculated as a weighted sum of similarity scores:
+\begin{equation}
+    a_{i}^{\prime}=\sum_{j=1}^{N_{i}}W_{i,j}^{\prime}sim(z_{i,j},p_{i,j})
+\end{equation}
+where $sim$ is the difference-of-logarithms similarity function. We will then perform a sweep of $k \in \{2, 4, 8, 16, 32, 64\}$ to analyze how cluster density affects cumulative reward. Intuitively, wider sweeping of this cluster space will lead to greater number of prototypes leading to a more complex/less intuitive model. To quantify the benefits of a lighter, more intuitive model, we can also tune a $\lambda$ parameter penalizing models for large prototype spaces and rewarding sparser, more easily human-actionable prototype spaces. 
+
+\section{Logistics}
+The project scope is commensurate with our team size of 2. We will utilize the existing open-source code for PW-Net to avoid manual boilerplate implementation. 
+
+\textbf{Resources and Sanity Check:}
+Training individual wrappers is computationally efficient, typically requiring less than 30 minutes on a standard CPU. To ensure statistical significance, we will perform evaluations across 5 random seeds for each configuration. Accounting for debugging and parameter tuning, we estimate a total of 50 experiment runs, which is realistic within our three-week timeline.
+
+\textbf{Timeline:}
+\begin{itemize}
+    \item \textbf{Week 1:} Environment setup, black-box data collection, and clustering logic development.
+    \item \textbf{Week 2:} Wrapper training sweeps across different cluster sizes ($k$).
+    \item \textbf{Week 3:} Comparative analysis of MSE/Reward and final write-up.
+\end{itemize}
+
+\begin{thebibliography}{9}
+\bibitem{Bontempelli2023} Bontempelli et al. (2023). Concept-level Debugging of Part-Prototype Networks. \textit{ICLR}.
+\bibitem{Chen2019} Chen et al. (2019). This Looks Like That: Deep Learning for Interpretable Image Recognition. \textit{NeurIPS}.
+\bibitem{Kenny2023} Kenny et al. (2023). Towards Interpretable Deep Reinforcement Learning with Human-Friendly Prototypes. \textit{ICLR}.
+\bibitem{Paes2023} Paes et al. (2023). On
+the inevitability of the Rashomon effect. \textit{ISIT}.
+\end{thebibliography}
+
+\end{document}
