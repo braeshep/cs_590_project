@@ -1,0 +1,76 @@
+
+=================================================================
+k = 2  (latent-space clustering)
+=================================================================
+  Cluster  0: n=22135  steer=-0.032  accel=0.265  brake=0.031
+           centroid idx=3049  action=[+0.006, 0.330, 0.000]
+           10 distance-weighted samples saved
+  Cluster  1: n=20999  steer=-0.025  accel=0.481  brake=0.048
+           centroid idx=19426  action=[-0.274, 0.700, 0.000]
+           10 distance-weighted samples saved
+
+=================================================================
+k = 4  (latent-space clustering)
+=================================================================
+  Cluster  0: n= 1348  steer=-0.196  accel=0.012  brake=0.405
+           centroid idx=19763  action=[-0.543, 0.000, 0.194]
+           10 distance-weighted samples saved
+  Cluster  1: n=21314  steer=-0.033  accel=0.258  brake=0.031
+           centroid idx=3049  action=[+0.006, 0.330, 0.000]
+           10 distance-weighted samples saved
+  Cluster  2: n=  500  steer=-0.001  accel=0.498  brake=0.000
+           centroid idx=11850  action=[+0.000, 0.713, 0.000]
+           10 distance-weighted samples saved
+  Cluster  3: n=19972  steer=-0.014  accel=0.511  brake=0.024
+           centroid idx=31907  action=[-0.143, 0.667, 0.000]
+           10 distance-weighted samples saved
+
+=================================================================
+k = 6  (latent-space clustering)
+=================================================================
+  Cluster  0: n=13257  steer=-0.007  accel=0.535  brake=0.026
+           centroid idx=2778  action=[-0.287, 0.673, 0.000]
+           10 distance-weighted samples saved
+  Cluster  1: n= 4516  steer=-0.018  accel=0.365  brake=0.071
+           centroid idx=15232  action=[-0.076, 0.705, 0.000]
+           10 distance-weighted samples saved
+  Cluster  2: n= 7015  steer=-0.045  accel=0.117  brake=0.048
+           centroid idx=13613  action=[-0.012, 0.000, 0.036]
+           10 distance-weighted samples saved
+  Cluster  3: n=  590  steer=-0.522  accel=0.006  brake=0.533
+           centroid idx=19954  action=[-0.564, 0.000, 0.588]
+           10 distance-weighted samples saved
+  Cluster  4: n=  500  steer=-0.001  accel=0.498  brake=0.000
+           centroid idx=11850  action=[+0.000, 0.713, 0.000]
+           10 distance-weighted samples saved
+  Cluster  5: n=17256  steer=-0.025  accel=0.357  brake=0.022
+           centroid idx=23026  action=[-0.129, 0.455, 0.000]
+           10 distance-weighted samples saved
+
+=================================================================
+k = 8  (latent-space clustering)
+=================================================================
+  Cluster  0: n=  500  steer=-0.001  accel=0.498  brake=0.000
+           centroid idx=11850  action=[+0.000, 0.713, 0.000]
+           10 distance-weighted samples saved
+  Cluster  1: n=11354  steer=+0.006  accel=0.582  brake=0.008
+           centroid idx=16339  action=[+0.021, 0.696, 0.000]
+           10 distance-weighted samples saved
+  Cluster  2: n= 5314  steer=+0.003  accel=0.104  brake=0.040
+           centroid idx=9073  action=[+0.005, 0.000, 0.106]
+           10 distance-weighted samples saved
+  Cluster  3: n=  592  steer=-0.520  accel=0.005  brake=0.531
+           centroid idx=19954  action=[-0.564, 0.000, 0.588]
+           10 distance-weighted samples saved
+  Cluster  4: n= 4793  steer=-0.033  accel=0.409  brake=0.060
+           centroid idx=23559  action=[-0.146, 0.489, 0.000]
+           10 distance-weighted samples saved
+  Cluster  5: n= 3694  steer=+0.026  accel=0.403  brake=0.075
+           centroid idx=22354  action=[-0.013, 0.686, 0.000]
+           10 distance-weighted samples saved
+  Cluster  6: n= 2701  steer=-0.214  accel=0.157  brake=0.066
+           centroid idx=6200  action=[-0.456, 0.000, 0.009]
+           10 distance-weighted samples saved
+  Cluster  7: n=14186  steer=-0.026  accel=0.330  brake=0.023
+           centroid idx=23246  action=[+0.028, 0.463, 0.000]
+           10 distance-weighted samples saved

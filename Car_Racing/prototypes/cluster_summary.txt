@@ -1,0 +1,76 @@
+
+=======================================================
+k = 2
+=======================================================
+  Cluster  0: n=38707  steer=-0.019  accel=0.413  brake=0.005
+           centroid prototype idx=18004  action=[-0.019, 0.414, 0.000]
+           10 distance-weighted samples saved
+  Cluster  1: n= 4427  steer=-0.114  accel=-0.000  brake=0.341
+           centroid prototype idx=4480  action=[-0.119, 0.000, 0.341]
+           10 distance-weighted samples saved
+
+=======================================================
+k = 4
+=======================================================
+  Cluster  0: n= 9581  steer=-0.343  accel=0.477  brake=0.004
+           centroid prototype idx=15219  action=[-0.340, 0.475, 0.000]
+           10 distance-weighted samples saved
+  Cluster  1: n= 3200  steer=-0.131  accel=-0.000  brake=0.407
+           centroid prototype idx=39911  action=[-0.136, 0.000, 0.405]
+           10 distance-weighted samples saved
+  Cluster  2: n=14282  steer=+0.034  accel=0.113  brake=0.025
+           centroid prototype idx=5288  action=[+0.035, 0.112, 0.000]
+           10 distance-weighted samples saved
+  Cluster  3: n=16071  steer=+0.124  accel=0.609  brake=0.000
+           centroid prototype idx=12211  action=[+0.125, 0.610, 0.000]
+           10 distance-weighted samples saved
+
+=======================================================
+k = 6
+=======================================================
+  Cluster  0: n= 5613  steer=-0.439  accel=0.343  brake=0.010
+           centroid prototype idx=10339  action=[-0.438, 0.344, 0.000]
+           10 distance-weighted samples saved
+  Cluster  1: n=12608  steer=+0.024  accel=0.127  brake=0.012
+           centroid prototype idx=18181  action=[+0.024, 0.126, 0.000]
+           10 distance-weighted samples saved
+  Cluster  2: n=13867  steer=-0.069  accel=0.623  brake=-0.000
+           centroid prototype idx=36104  action=[-0.070, 0.624, 0.000]
+           10 distance-weighted samples saved
+  Cluster  3: n= 1350  steer=-0.281  accel=-0.000  brake=0.550
+           centroid prototype idx=20226  action=[-0.274, 0.000, 0.559]
+           10 distance-weighted samples saved
+  Cluster  4: n= 2905  steer=+0.012  accel=-0.000  brake=0.255
+           centroid prototype idx=19320  action=[+0.010, 0.000, 0.254]
+           10 distance-weighted samples saved
+  Cluster  5: n= 6791  steer=+0.329  accel=0.559  brake=0.000
+           centroid prototype idx=27165  action=[+0.329, 0.560, 0.000]
+           10 distance-weighted samples saved
+
+=======================================================
+k = 8
+=======================================================
+  Cluster  0: n= 3490  steer=-0.428  accel=0.134  brake=0.028
+           centroid prototype idx=3432  action=[-0.422, 0.137, 0.000]
+           10 distance-weighted samples saved
+  Cluster  1: n= 5255  steer=+0.375  accel=0.540  brake=0.001
+           centroid prototype idx=38263  action=[+0.377, 0.542, 0.000]
+           10 distance-weighted samples saved
+  Cluster  2: n= 2628  steer=+0.037  accel=-0.000  brake=0.273
+           centroid prototype idx=28479  action=[+0.036, 0.000, 0.276]
+           10 distance-weighted samples saved
+  Cluster  3: n= 7434  steer=-0.020  accel=0.376  brake=-0.000
+           centroid prototype idx=35332  action=[-0.021, 0.376, 0.000]
+           10 distance-weighted samples saved
+  Cluster  4: n= 5226  steer=-0.347  accel=0.623  brake=-0.000
+           centroid prototype idx=33816  action=[-0.346, 0.624, 0.000]
+           10 distance-weighted samples saved
+  Cluster  5: n= 8798  steer=+0.014  accel=0.682  brake=-0.000
+           centroid prototype idx=35257  action=[+0.013, 0.681, 0.000]
+           10 distance-weighted samples saved
+  Cluster  6: n= 9036  steer=+0.046  accel=0.068  brake=0.019
+           centroid prototype idx=14795  action=[+0.045, 0.067, 0.000]
+           10 distance-weighted samples saved
+  Cluster  7: n= 1267  steer=-0.301  accel=-0.000  brake=0.557
+           centroid prototype idx=29465  action=[-0.300, 0.000, 0.560]
+           10 distance-weighted samples saved
