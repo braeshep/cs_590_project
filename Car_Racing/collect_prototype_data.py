@@ -1,246 +1,183 @@
 """
 collect_prototype_data.py
 =========================
-Runs the pre-trained PPO car-racing agent from the PWNet / deep-racing repo
-and collects a dataset of:
+Runs the pre-trained PPO car-racing agent and collects:
     - raw observation frames  (96x96 RGB)
-    - encoder latent vectors  (z  = f_enc(frame))
+    - encoder latent vectors  (z = f_enc(frame), 256-d)
     - agent actions           (steering, acceleration, brake)
+    - rewards
 
-The resulting .npz file is ready for downstream clustering / prototype
-discovery.
+Architecture recovered from agent_weights.pt:
+    conv.0  : Conv2d(4, 32, 8, stride=4)
+    conv.2  : Conv2d(32, 64, 4, stride=2)
+    conv.4  : Conv2d(64, 64, 3, stride=1)
+    actor_fc: Linear(4096, 256)   <-- latent z lives here
+    alpha_head: Linear(256, 2)    \\
+    beta_head : Linear(256, 2)    /  Beta distribution over [steer, gas/brake]
+
+Output: prototype_data.npz
+    frames    (N, 96, 96, 3)  uint8
+    latents   (N, 256)        float32
+    actions   (N, 3)          float32  [steer, accel, brake]
+    rewards   (N,)            float32
 
 USAGE
 -----
-1.  Clone both repos side-by-side (or adjust DEEP_RACING_ROOT below):
-        git clone https://github.com/EoinKenny/Prototype-Wrapper-Network-ICLR23
-        git clone https://github.com/JinayJain/deep-racing
-
-2.  Activate the pwnet virtualenv described in the PWNet README, then run:
-        python collect_prototype_data.py
-
-3.  Output: prototype_data.npz  (same directory as this script)
-        frames    – (N, 96, 96, 3)   uint8
-        latents   – (N, latent_dim)  float32
-        actions   – (N, 3)           float32  [steer, accel, brake]
-        rewards   – (N,)             float32
-
-NOTES
------
-* gym==0.21.0  (CarRacing-v0, continuous action space)
-* The agent uses a frame-stack of 4 greyscale frames internally, but we
-  save the raw RGB observation at each step for human readability.
-* Set NUM_EPISODES / MAX_STEPS to taste. 50 episodes × 1000 steps ≈ 50 k
-  frames, which is usually plenty for clustering.
+    python collect_prototype_data.py
 """
 
-import sys
-import os
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import gym
 import cv2
-from pathlib import Path
 from collections import deque
+from pathlib import Path
 
 # ─────────────────────────────────────────────────────────────────────────────
-# PATHS – adjust if your checkout layout differs
+# SETTINGS
 # ─────────────────────────────────────────────────────────────────────────────
-
-# Root of the JinayJain/deep-racing clone (contains model.py + saved weights)
-DEEP_RACING_ROOT = Path("../deep-racing")
-
-# Path to the pre-trained actor/critic checkpoint saved by deep-racing
-# The file is typically called "actor.pth" or "best_model.pth".
-# Check deep-racing/checkpoints/ or wherever you saved it.
-CHECKPOINT_PATH  = DEEP_RACING_ROOT / "checkpoints" / "best_model.pth"
-
-# ─────────────────────────────────────────────────────────────────────────────
-# COLLECTION SETTINGS
-# ─────────────────────────────────────────────────────────────────────────────
-
-NUM_EPISODES   = 50      # number of full episodes to collect
-MAX_STEPS      = 1000    # max timesteps per episode (env resets at ~1000 anyway)
-FRAME_STACK    = 4       # must match what the agent was trained with
-FRAME_SIZE     = 84      # greyscale frame size used internally by the agent
-OUTPUT_FILE    = "prototype_data.npz"
-DEVICE         = "cuda" if torch.cuda.is_available() else "cpu"
+CHECKPOINT_PATH = Path(r"weights\agent_weights.pt")
+OUTPUT_FILE     = "prototype_data.npz"
+NUM_EPISODES    = 50
+MAX_STEPS       = 1000
+FRAME_STACK     = 4
+FRAME_SIZE      = 96      # greyscale size used during training
+DEVICE          = "cuda" if torch.cuda.is_available() else "cpu"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Agent / Encoder definition
-# Mirrors the architecture used in JinayJain/deep-racing (PPO + CNN encoder)
+# Model — exactly matching the checkpoint
 # ─────────────────────────────────────────────────────────────────────────────
 
-class CNNEncoder(nn.Module):
+class AgentNet(nn.Module):
     """
-    Convolutional encoder from JinayJain/deep-racing.
-    Input:  (B, FRAME_STACK, FRAME_SIZE, FRAME_SIZE)  float32 in [0,1]
-    Output: (B, 256)  latent vector z
-    """
-    def __init__(self, in_channels: int = FRAME_STACK):
-        super().__init__()
-        self.conv = nn.Sequential(
-            nn.Conv2d(in_channels, 32, kernel_size=8, stride=4),
-            nn.ReLU(),
-            nn.Conv2d(32, 64, kernel_size=4, stride=2),
-            nn.ReLU(),
-            nn.Conv2d(64, 64, kernel_size=3, stride=1),
-            nn.ReLU(),
-        )
-        # Compute flat size after conv layers
-        dummy = torch.zeros(1, in_channels, FRAME_SIZE, FRAME_SIZE)
-        flat  = self.conv(dummy).view(1, -1).shape[1]
-
-        self.fc = nn.Sequential(
-            nn.Linear(flat, 256),
-            nn.ReLU(),
-        )
-
-    def forward(self, x):
-        x = self.conv(x)
-        x = x.view(x.size(0), -1)
-        return self.fc(x)
-
-
-class ActorHead(nn.Module):
-    """
-    Gaussian actor head for continuous CarRacing actions.
-    Outputs mean of [steer, accel, brake] (tanh-squashed where appropriate).
-    """
-    def __init__(self, latent_dim: int = 256, action_dim: int = 3):
-        super().__init__()
-        self.net = nn.Sequential(
-            nn.Linear(latent_dim, 128),
-            nn.Tanh(),
-            nn.Linear(128, action_dim),
-        )
-
-    def forward(self, z):
-        return self.net(z)
-
-
-class PWNetBaseAgent(nn.Module):
-    """
-    Thin wrapper that combines encoder + actor so we can load the checkpoint
-    and use the encoder independently.
+    Matches the architecture saved in agent_weights.pt exactly.
+    conv.0/2/4  →  actor_fc  →  latent z (256-d)
+                             →  alpha_head (2)
+                             →  beta_head  (2)
+    critic is also in the checkpoint but we don't need it for inference.
     """
     def __init__(self):
         super().__init__()
-        self.encoder = CNNEncoder()
-        self.actor   = ActorHead(latent_dim=256, action_dim=3)
+        self.conv = nn.Sequential(
+            nn.Conv2d(4, 32, kernel_size=8, stride=4),   # conv.0
+            nn.ReLU(),
+            nn.Conv2d(32, 64, kernel_size=4, stride=2),  # conv.2
+            nn.ReLU(),
+            nn.Conv2d(64, 64, kernel_size=3, stride=1),  # conv.4
+            nn.ReLU(),
+        )
+        self.actor_fc   = nn.Sequential(nn.Linear(4096, 256))  # actor_fc.0
+        self.alpha_head = nn.Sequential(nn.Linear(256, 2))    # alpha_head.0
+        self.beta_head  = nn.Sequential(nn.Linear(256, 2))    # beta_head.0
 
-    def forward(self, obs_stack):
-        z   = self.encoder(obs_stack)
-        act = self.actor(z)
-        return act, z
+        # critic weights are in the checkpoint; include them so load_state_dict
+        # doesn't complain about unexpected keys.
+        self.critic = nn.Sequential(
+            nn.Linear(4096, 256),
+            nn.ReLU(),
+            nn.Linear(256, 1),
+        )
+
+    def forward(self, x):
+        """x: (B, 4, 84, 84) float32 in [0,1]"""
+        h = self.conv(x)
+        h = h.reshape(h.size(0), -1)          # (B, 4096)
+        z = F.relu(self.actor_fc(h))          # (B, 256)  <- latent
+        alpha = F.softplus(self.alpha_head(z)) + 1   # Beta param alpha > 1
+        beta  = F.softplus(self.beta_head(z))  + 1   # Beta param beta > 1
+        return z, alpha, beta
 
     @torch.no_grad()
-    def get_action(self, obs_stack_np: np.ndarray):
-        """obs_stack_np: (FRAME_STACK, H, W) float32 [0,1]"""
-        t   = torch.FloatTensor(obs_stack_np).unsqueeze(0).to(DEVICE)
-        act, z = self.forward(t)
-        action  = act.squeeze(0).cpu().numpy()
-        latent  = z.squeeze(0).cpu().numpy()
-        # Clip to valid CarRacing ranges
-        steer = float(np.clip(action[0], -1.0, 1.0))
-        accel = float(np.clip(action[1],  0.0, 1.0))
-        brake = float(np.clip(action[2],  0.0, 1.0))
-        return np.array([steer, accel, brake], dtype=np.float32), latent
+    def get_action_and_latent(self, frame_stack_np):
+        """
+        frame_stack_np: (4, 84, 84) float32 [0,1]
+        Returns:
+            action : (3,) float32  [steer, accel, brake]
+            latent : (256,) float32
+        """
+        t = torch.FloatTensor(frame_stack_np).unsqueeze(0).to(DEVICE)
+        z, alpha, beta = self.forward(t)
 
+        # Use the mean of the Beta distribution for deterministic action
+        # Beta mean = alpha / (alpha + beta),  range [0,1]
+        mean = (alpha / (alpha + beta)).squeeze(0).cpu().numpy()  # (2,)
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Frame pre-processing (matches deep-racing training pipeline)
-# ─────────────────────────────────────────────────────────────────────────────
+        # mean[0] -> steering:  rescale [0,1] -> [-1,1]
+        # mean[1] -> combined gas/brake token; split at 0.5
+        steer = float(mean[0]) * 2.0 - 1.0
+        steer = float(np.clip(steer, -1.0, 1.0))
 
-def preprocess_frame(rgb_frame: np.ndarray) -> np.ndarray:
-    """
-    96x96 RGB uint8  →  84x84 greyscale float32 [0,1]
-    Crops the bottom info panel that CarRacing-v0 adds.
-    """
-    # Crop bottom dashboard (last 12 rows of the 96x96 frame)
-    frame = rgb_frame[:84, :, :]
-    frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)          # → (84, 84)
-    frame = frame.astype(np.float32) / 255.0
-    return frame
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Main data collection loop
-# ─────────────────────────────────────────────────────────────────────────────
-
-def collect_data():
-    print(f"Device: {DEVICE}")
-
-    # ── Load model ──────────────────────────────────────────────────────────
-    model = PWNetBaseAgent().to(DEVICE)
-
-    if CHECKPOINT_PATH.exists():
-        ckpt = torch.load(str(CHECKPOINT_PATH), map_location=DEVICE)
-        # The checkpoint might be a state_dict or a dict with nested keys.
-        # Try common formats:
-        if isinstance(ckpt, dict) and "state_dict" in ckpt:
-            model.load_state_dict(ckpt["state_dict"])
-        elif isinstance(ckpt, dict) and "actor" in ckpt:
-            model.actor.load_state_dict(ckpt["actor"])
-            model.encoder.load_state_dict(ckpt["encoder"])
+        if mean[1] >= 0.5:
+            accel = float((mean[1] - 0.5) * 2.0)
+            brake = 0.0
         else:
-            try:
-                model.load_state_dict(ckpt)
-            except RuntimeError as e:
-                print(f"[WARNING] Could not load checkpoint directly: {e}")
-                print("          Running with random weights – useful for testing the pipeline,")
-                print("          but you MUST load a proper checkpoint for real data collection.")
-    else:
-        print(f"[WARNING] Checkpoint not found at {CHECKPOINT_PATH}.")
-        print("          Continuing with random weights (for pipeline testing only).")
+            accel = 0.0
+            brake = float((0.5 - mean[1]) * 2.0)
 
+        action = np.array([steer, accel, brake], dtype=np.float32)
+        latent = z.squeeze(0).cpu().numpy()
+        return action, latent
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Frame preprocessing  (matches training pipeline)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def preprocess(rgb_frame: np.ndarray) -> np.ndarray:
+    """96x96 RGB uint8  ->  96x96 greyscale float32 [0,1]"""
+    frame = cv2.cvtColor(rgb_frame, cv2.COLOR_RGB2GRAY)  # (96, 96)
+    return frame.astype(np.float32) / 255.0
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Main collection loop
+# ─────────────────────────────────────────────────────────────────────────────
+
+def collect():
+    print(f"Device : {DEVICE}")
+
+    # Load model
+    model = AgentNet().to(DEVICE)
+    ckpt  = torch.load(str(CHECKPOINT_PATH), map_location=DEVICE)
+    model.load_state_dict(ckpt)
     model.eval()
+    print(f"Loaded checkpoint from {CHECKPOINT_PATH}")
 
-    # ── Environment ─────────────────────────────────────────────────────────
-    # Use render_mode=None for headless collection (faster)
     env = gym.make("CarRacing-v0")
 
-    all_frames  = []   # raw 96×96 RGB, uint8
-    all_latents = []   # 256-d float32
-    all_actions = []   # [steer, accel, brake] float32
-    all_rewards = []   # scalar float32
+    all_frames, all_latents, all_actions, all_rewards = [], [], [], []
 
     for ep in range(NUM_EPISODES):
-        obs       = env.reset()       # (96, 96, 3) uint8
+        obs       = env.reset()
         frame_buf = deque(maxlen=FRAME_STACK)
-
-        # Fill frame buffer with the first frame
-        first_frame = preprocess_frame(obs)
+        first     = preprocess(obs)
         for _ in range(FRAME_STACK):
-            frame_buf.append(first_frame)
+            frame_buf.append(first)
 
-        ep_frames  = []
-        ep_latents = []
-        ep_actions = []
-        ep_rewards = []
+        ep_frames, ep_latents, ep_actions, ep_rewards = [], [], [], []
 
         for step in range(MAX_STEPS):
-            obs_stack = np.stack(frame_buf, axis=0)          # (4, 84, 84)
-            action, latent = model.get_action(obs_stack)
+            stack          = np.stack(frame_buf, axis=0)          # (4,84,84)
+            action, latent = model.get_action_and_latent(stack)
 
-            next_obs, reward, done, info = env.step(action)
+            next_obs, reward, done, _ = env.step([float(action[0]), float(action[1]), float(action[2])])
 
-            # Store raw RGB frame (before preprocessing)
             ep_frames.append(obs.astype(np.uint8))
             ep_latents.append(latent)
             ep_actions.append(action)
             ep_rewards.append(float(reward))
 
-            # Advance
             obs = next_obs
-            frame_buf.append(preprocess_frame(obs))
+            frame_buf.append(preprocess(obs))
 
             if done:
                 break
 
-        ep_reward = sum(ep_rewards)
-        print(f"  Episode {ep+1:3d}/{NUM_EPISODES}  |  steps={len(ep_frames):4d}  |  reward={ep_reward:7.1f}")
+        total_r = sum(ep_rewards)
+        print(f"  Episode {ep+1:3d}/{NUM_EPISODES}  |  "
+              f"steps={len(ep_frames):4d}  |  reward={total_r:7.1f}")
 
         all_frames.append(np.array(ep_frames))
         all_latents.append(np.array(ep_latents))
@@ -249,33 +186,29 @@ def collect_data():
 
     env.close()
 
-    # ── Concatenate and save ─────────────────────────────────────────────────
-    frames  = np.concatenate(all_frames,  axis=0)   # (N, 96, 96, 3)
-    latents = np.concatenate(all_latents, axis=0)   # (N, 256)
-    actions = np.concatenate(all_actions, axis=0)   # (N, 3)
-    rewards = np.concatenate(all_rewards, axis=0)   # (N,)
+    frames  = np.concatenate(all_frames,  axis=0)
+    latents = np.concatenate(all_latents, axis=0)
+    actions = np.concatenate(all_actions, axis=0)
+    rewards = np.concatenate(all_rewards, axis=0)
 
-    print(f"\nTotal samples collected: {len(frames):,}")
-    print(f"  frames  shape : {frames.shape}   dtype={frames.dtype}")
-    print(f"  latents shape : {latents.shape}  dtype={latents.dtype}")
-    print(f"  actions shape : {actions.shape}  dtype={actions.dtype}")
-    print(f"  rewards shape : {rewards.shape}  dtype={rewards.dtype}")
+    print(f"\nTotal samples : {len(frames):,}")
+    print(f"  frames      : {frames.shape}  {frames.dtype}")
+    print(f"  latents     : {latents.shape}  {latents.dtype}")
+    print(f"  actions     : {actions.shape}  {actions.dtype}")
+    print(f"  rewards     : {rewards.shape}  {rewards.dtype}")
 
-    np.savez_compressed(
-        OUTPUT_FILE,
-        frames=frames,
-        latents=latents,
-        actions=actions,
-        rewards=rewards,
-    )
-    print(f"\nSaved → {OUTPUT_FILE}")
+    np.savez_compressed(OUTPUT_FILE,
+                        frames=frames,
+                        latents=latents,
+                        actions=actions,
+                        rewards=rewards)
+    print(f"\nSaved -> {OUTPUT_FILE}")
 
-    # Quick sanity check
-    loaded = np.load(OUTPUT_FILE)
-    assert loaded["frames"].shape  == frames.shape
-    assert loaded["latents"].shape == latents.shape
-    print("Sanity check passed ✓")
+    # Sanity check
+    d = np.load(OUTPUT_FILE)
+    assert d["frames"].shape == frames.shape
+    print("Sanity check passed!")
 
 
 if __name__ == "__main__":
-    collect_data()
+    collect()
