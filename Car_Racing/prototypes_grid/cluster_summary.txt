@@ -1,0 +1,56 @@
+
+=================================================================
+k = 2  (grid-balanced: action cluster → visual centroid)
+=================================================================
+  Cluster  0: n= 4848  act_centroid=[-0.109, 0.000, 0.322]  visual_proto_idx=27489  proto_action=[-0.567, 0.000, 0.197]
+           10 distance-weighted samples saved
+  Cluster  1: n=31488  act_centroid=[-0.022, 0.430, 0.004]  visual_proto_idx=3626  proto_action=[+0.212, 0.551, 0.000]
+           10 distance-weighted samples saved
+
+=================================================================
+k = 4  (grid-balanced: action cluster → visual centroid)
+=================================================================
+  Cluster  0: n=11428  act_centroid=[+0.210, 0.578, 0.000]  visual_proto_idx=4827  proto_action=[+0.080, 0.678, 0.000]
+           10 distance-weighted samples saved
+  Cluster  1: n= 3150  act_centroid=[-0.126, 0.000, 0.410]  visual_proto_idx=13020  proto_action=[-0.033, 0.000, 0.385]
+           10 distance-weighted samples saved
+  Cluster  2: n=11947  act_centroid=[-0.037, 0.115, 0.031]  visual_proto_idx=11929  proto_action=[+0.242, 0.115, 0.000]
+           10 distance-weighted samples saved
+  Cluster  3: n= 9811  act_centroid=[-0.284, 0.567, 0.000]  visual_proto_idx=6336  proto_action=[-0.615, 0.704, 0.000]
+           10 distance-weighted samples saved
+
+=================================================================
+k = 6  (grid-balanced: action cluster → visual centroid)
+=================================================================
+  Cluster  0: n=10096  act_centroid=[-0.203, 0.617, -0.000]  visual_proto_idx=24663  proto_action=[-0.422, 0.722, 0.000]
+           10 distance-weighted samples saved
+  Cluster  1: n= 9462  act_centroid=[+0.077, 0.167, 0.011]  visual_proto_idx=6519  proto_action=[+0.062, 0.408, 0.000]
+           10 distance-weighted samples saved
+  Cluster  2: n= 4289  act_centroid=[-0.405, 0.164, 0.022]  visual_proto_idx=35015  proto_action=[-0.486, 0.133, 0.000]
+           10 distance-weighted samples saved
+  Cluster  3: n= 1362  act_centroid=[-0.281, -0.000, 0.548]  visual_proto_idx=14915  proto_action=[-0.704, 0.000, 0.402]
+           10 distance-weighted samples saved
+  Cluster  4: n= 2855  act_centroid=[+0.034, 0.000, 0.253]  visual_proto_idx=11928  proto_action=[+0.468, 0.000, 0.293]
+           10 distance-weighted samples saved
+  Cluster  5: n= 8272  act_centroid=[+0.258, 0.608, -0.000]  visual_proto_idx=36008  proto_action=[+0.270, 0.718, 0.000]
+           10 distance-weighted samples saved
+
+=================================================================
+k = 8  (grid-balanced: action cluster → visual centroid)
+=================================================================
+  Cluster  0: n= 3187  act_centroid=[-0.445, 0.133, 0.029]  visual_proto_idx=35015  proto_action=[-0.486, 0.133, 0.000]
+           10 distance-weighted samples saved
+  Cluster  1: n= 5120  act_centroid=[+0.331, 0.628, 0.000]  visual_proto_idx=36008  proto_action=[+0.270, 0.718, 0.000]
+           10 distance-weighted samples saved
+  Cluster  2: n= 7612  act_centroid=[-0.025, 0.159, 0.013]  visual_proto_idx=31843  proto_action=[-0.075, 0.198, 0.000]
+           10 distance-weighted samples saved
+  Cluster  3: n= 2693  act_centroid=[+0.021, 0.000, 0.264]  visual_proto_idx=11928  proto_action=[+0.468, 0.000, 0.293]
+           10 distance-weighted samples saved
+  Cluster  4: n= 8223  act_centroid=[-0.011, 0.602, -0.000]  visual_proto_idx=1868  proto_action=[-0.140, 0.662, 0.000]
+           10 distance-weighted samples saved
+  Cluster  5: n= 5271  act_centroid=[-0.349, 0.614, 0.000]  visual_proto_idx=6336  proto_action=[-0.615, 0.704, 0.000]
+           10 distance-weighted samples saved
+  Cluster  6: n= 2923  act_centroid=[+0.328, 0.174, 0.014]  visual_proto_idx=1910  proto_action=[+0.363, 0.236, 0.000]
+           10 distance-weighted samples saved
+  Cluster  7: n= 1307  act_centroid=[-0.288, -0.000, 0.555]  visual_proto_idx=14915  proto_action=[-0.704, 0.000, 0.402]
+           10 distance-weighted samples saved
